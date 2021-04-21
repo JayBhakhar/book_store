@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 MongoURL = "mongodb+srv://JayBhakhar:jay456789@book-cluster.oec1c.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
 client = MongoClient(MongoURL).books_datadase.book
-
+app.config['SECRET_KEY'] = 'secret'
 
 # Books = [
 #     {'id': 0,
@@ -83,8 +83,8 @@ def add_book():
     name = str(data['name'])
     email = str(data['email'])
     phoneNumber = str(data['phoneNumber'])
-    city = str(data['city'])
-    country = str(data['country'])
+    city = str(data['city']) #int
+    country = str(data['country']) #int
     password = str(data['password'])
     postindex = str(data['postindex'])
     client.insert_one({
@@ -112,51 +112,50 @@ def admin():
     return ''
 
 # token authorization example
-#
-# @app.route('/login', methods = ['GET','POST'])
-# def login():
-#     auth = request.authorization
-#
-#     if auth and auth.password == 'password':
-#         return ''
-#     return make_response('abc', 200, {'ss':'ss'})
-#
-# def token_required(f):
-#     @wraps(f)
-#     def decorated(*args, **kwargs):
-#         token = request.args.get('token') #http://127.0.0.1:5000/route?token=alshfjfjdklsfj89549834ur
-#
-#         if not token:
-#             return jsonify({'message' : 'Token is missing!'}), 403
-#
-#         try:
-#             data = jwt.decode(token, app.config['SECRET_KEY'])
-#         except:
-#             return jsonify({'message' : 'Token is invalid!'}), 403
-#
-#         return f(*args, **kwargs)
-#
-#     return decorated
-#
-# @app.route('/unprotected')
-# def unprotected():
-#     return jsonify({'message' : 'Anyone can view this!'})
-#
-# @app.route('/protected')
-# @token_required
-# def protected():
-#     return jsonify({'message' : 'This is only available for people with valid tokens.'})
-#
-# @app.route('/login')
-# def login():
-#     auth = request.authorization
-#
-#     if auth and auth.password == 'secret':
-#         token = jwt.encode({'user' : auth.username, 'exp' : datetime.datetime.utcnow() + datetime.timedelta(seconds=15)}, app.config['SECRET_KEY'])
-#
-#         return jsonify({'token' : token.decode('UTF-8')})
-#
-#     return make_response('Could not verify!', 401, {'WWW-Authenticate' : 'Basic realm="Login Required"'})
+
+@app.route('/login', methods = ['GET','POST'])
+def login():
+    auth = request.authorization
+
+    if auth and auth.password == 'password':
+        return ''
+    return make_response('abc', 200, {'ss':'ss'})
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.args.get('token') #http://127.0.0.1:5000/route?token=alshfjfjdklsfj89549834ur
+
+        if not token:
+            return jsonify({'message' : 'Token is missing!'}), 401
+
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'])
+        except:
+            return jsonify({'message' : 'Token is invalid!'}), 401
+
+        return f(*args, **kwargs)
+
+    return decorated
+
+@app.route('/unprotected')
+def unprotected():
+    return jsonify({'message' : 'Anyone can view this!'})
+
+@app.route('/protected')
+@token_required
+def protected():
+    return jsonify({'message' : 'This is only available for people with valid tokens.'})
+
+@app.route('/login2')
+def login2():
+    auth = request.authorization
+
+    if auth and auth.password == '123':
+        token = jwt.encode({'user': auth.username, 'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=600)}, app.config['SECRET_KEY']) #admin or not
+        return jsonify({'token': token})
+
+    return make_response('Could not verify!', 401, {'WWW-Authenticate' : 'Basic realm="Login Required"'})
 
 if __name__ == '__main__':
     app.run(debug=1)

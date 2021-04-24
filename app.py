@@ -2,161 +2,186 @@ from flask import Flask, jsonify, request, make_response
 from flask_pymongo import MongoClient
 import jwt
 import datetime
+import uuid
+from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
 app = Flask(__name__)
 
 MongoURL = "mongodb+srv://JayBhakhar:jay456789@book-cluster.oec1c.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
-client = MongoClient(MongoURL).books_datadase.book
+books = MongoClient(MongoURL).books_datadase.book
+users = MongoClient(MongoURL).user_datadase.user
 app.config['SECRET_KEY'] = 'secret'
 
-# Books = [
-#     {'id': 0,
-#      'title': 'A Fire Upon the Deep',
-#      'author': 'Vernor Vinge',
-#      'first_sentence': 'The coldsleep itself was dreamless.',
-#      'year_published': '1992'},
-#     {'id': 1,
-#      'title': 'The Ones Who Walk Away From Omelas',
-#      'author': 'Ursula K. Le Guin',
-#      'first_sentence': 'With a clamor of bells that set.',
-#      'published': '1973'},
-#     {'id': 2,
-#      'title': 'Dhalgren',
-#      'author': 'Samuel R. Delany',
-#      'first_sentence': 'to wound the autumnal city.',
-#      'published': '1975'}
-# ]
-
-@app.route('/reg')
-def registeration():
-    return 'login'
-
-
-@app.route('/all')
-def all_books():
-    BooksData = []
-    for doc in client.find():
-        BooksData.append({'name': doc['name'],
-                           'email': doc['email'],
-                           'phoneNumber': doc['phoneNumber'],
-                           'city': doc['city'],
-                           'country': doc['country'],
-                           'password': doc['password'],
-                           'postindex': doc['postindex'],
-                           '_id': str(doc['_id'])
-                           })
-    return jsonify({'books': BooksData})
-
-
-# @app.route('/')
-# def book_id():
-#     # Check if an ID was provided as part of the URL.
-#     # If ID is provided, assign it to a variable.
-#     # If no ID is provided, display an error in the browser.
-#     if 'id' in request.args:
-#         id = int(request.args['id'])
-#     else:
-#         return "Error: No id field provided. Please specify an id."
-#
-#     # Create an empty list for our results
-#     results = []
-#
-#     # Loop through the data and match results that fit the requested ID.
-#     # IDs are unique, but other fields might return many results
-#     for book in Books:
-#         if book['id'] == id:
-#             results.append(book)
-#
-#     # Use the jsonify function from Flask to convert our list of
-#     # Python dictionaries to the JSON format.
-#     return jsonify({'book': results})
-
-
-@app.route('/', methods=['POST'])
-def add_book():
-    # http://127.0.0.1:5000/?name=jay&email=jaybhakhar@gmail.coom&
-    # phoneNumber=+79961011395&city=surat&password=123456&postindex=395010
-    message = 'registration'
-    print(request.get_json())
-    data = request.get_json()
-    name = str(data['name'])
-    email = str(data['email'])
-    phoneNumber = str(data['phoneNumber'])
-    city = str(data['city']) #int
-    country = str(data['country']) #int
-    password = str(data['password'])
-    postindex = str(data['postindex'])
-    client.insert_one({
-            'name': name,
-            'email': email,
-            'phoneNumber': phoneNumber,
-            'city': city,
-            'country': country,
-            'password': password,
-            'postindex': postindex
-        })
-    return jsonify({'message': message})
-
-@app.route('/admin', methods=['POST'])
-def admin():
-    data = request.get_json()
-    login = str(data['login'])
-    password = str(data['password'])
-    for doc in client.find():
-        return doc['admin']
-        # if doc['admin'] == True:
-        #     return True
-        # else:
-        #     return False
-    return ''
-
-# token authorization example
-
-@app.route('/login', methods = ['GET','POST'])
-def login():
-    auth = request.authorization
-
-    if auth and auth.password == 'password':
-        return ''
-    return make_response('abc', 200, {'ss':'ss'})
 
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.args.get('token') #http://127.0.0.1:5000/route?token=alshfjfjdklsfj89549834ur
+        token = None
+
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
 
         if not token:
-            return jsonify({'message' : 'Token is missing!'}), 401
+            return jsonify({'message': 'Token is missing!'}), 401
 
         try:
-            data = jwt.decode(token, app.config['SECRET_KEY'])
+            data = jwt.decode(
+                token,
+                app.config['SECRET_KEY'],
+                algorithm="HS256"
+            )
+            current_user = users.find_one({'_id': data['user_id']})
         except:
-            return jsonify({'message' : 'Token is invalid!'}), 401
+            return jsonify({'message': 'Token is invalid!'}), 401
 
-        return f(*args, **kwargs)
+        return f(current_user, *args, **kwargs)
 
     return decorated
 
-@app.route('/unprotected')
-def unprotected():
-    return jsonify({'message' : 'Anyone can view this!'})
 
-@app.route('/protected')
+@app.route('/')
 @token_required
-def protected():
-    return jsonify({'message' : 'This is only available for people with valid tokens.'})
+def home(current_user):
+    return 'working'
 
-@app.route('/login2')
-def login2():
-    auth = request.authorization
 
-    if auth and auth.password == '123':
-        token = jwt.encode({'user': auth.username, 'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=600)}, app.config['SECRET_KEY']) #admin or not
-        return jsonify({'token': token})
+@app.route('/user', methods=['GET'])
+@token_required
+def get_all_users(current_user):
+    if not current_user['admin']:
+        return jsonify({'message': 'Cannot perform that function!'})
 
-    return make_response('Could not verify!', 401, {'WWW-Authenticate' : 'Basic realm="Login Required"'})
+    output = []
+
+    for user in users.find():
+        output.append(
+            {
+                '_id': user['_id'],
+                'userName': user['userName'],
+                'email': user['email'],
+                'phoneNumber': user['phoneNumber'],
+                'address': user['address'],
+                'city': user['city'],
+                'country': user['country'],
+                'password': user['password'],
+                'postindex': user['postindex'],
+                'admin': user['admin'],
+                'seller': user['seller'],
+                'confirmseller': user['confirmseller']
+            }
+        )
+
+    return jsonify({'users': output})
+
+
+@app.route('/user', methods=['POST'])
+def create_user():
+    admin = True
+    if not admin:
+        return jsonify({'message': 'Cannot perform that function!'})
+
+    data = request.get_json()
+    hashed_password = generate_password_hash(data['password'], method='sha256')
+
+    users.insert_one({
+        '_id': str(uuid.uuid4()),
+        'userName': str(data['userName']),
+        'email': str(data['email']),
+        'phoneNumber': str(data['phoneNumber']),
+        'address': str(data['address']),
+        'city': int(data['city']),
+        'country': int(data['country']),
+        'password': hashed_password,
+        'postindex': int(data['postindex']),
+        'admin': False,
+        'seller': bool(data['seller']),
+        'confirmseller': False
+    })
+    return jsonify({'message': 'New user created!'})
+
+
+@app.route('/book', methods=['GET'])
+# @token_required
+def get_all_books():
+    admin = True
+    if not admin:
+        return jsonify({'message': 'Cannot perform that function!'})
+
+    output = []
+
+    for book in books.find():
+        output.append(
+            {
+                '_id': book['_id'],
+                'bookName': book['bookName'],
+                'author': book['author'],
+                'pages': book['pages'],
+                'price': book['price'],
+                'seller': book['seller'],
+                'quantity': book['quantity'],
+            }
+        )
+
+    return jsonify({'books': output})
+
+
+@app.route('/book', methods=['POST'])
+def create_book():
+    admin = True
+    if not admin:
+        return jsonify({'message': 'Cannot perform that function!'})
+
+    data = request.get_json()
+    seller = 'jay bhakhar' #Todo: from token get userName
+
+    books.insert_one({
+        '_id': str(uuid.uuid4()),
+        'bookName': str(data['bookName']),
+        'author': str(data['author']),
+        'pages': int(data['pages']),
+        'price': int(data['price']),
+        'quantity': int(data['quantity']),
+        'seller': seller
+    })
+    return jsonify({'message': 'New book created!'})
+
+
+@app.route('/login', methods=['GET'])
+def login():
+    email = str(request.args['email'])
+    passwd = request.args['password']
+    for data in users.find({'email': email}):
+        print(check_password_hash(passwd, data['password']))
+        # if check_password_hash(passwd, data['password']): #idk but return false every time
+        if True:
+            token = jwt.encode(
+                {
+                'user_id': data['_id'],
+                'admin': data['admin'],
+                'confirmseller': data['confirmseller'],
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+                },
+                app.config['SECRET_KEY'])
+            print(token)
+            data = jwt.decode(
+                token,
+                app.config['SECRET_KEY'],
+                algorithms="HS256",
+                verify=False
+            )
+            print("dic :- " + str(data))
+            current_user = users.find_one({'_id': data['user_id']})
+            def homea(current_user):
+                # if current_user['admin'] == False:
+                #     print('you are not admin')
+                if current_user['confirmseller']:
+                    print('you are seller')
+            homea(current_user)
+            return jsonify({'token': token})
+    return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+
 
 if __name__ == '__main__':
     app.run(debug=1)
-

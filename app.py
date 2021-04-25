@@ -45,12 +45,12 @@ def token_required(f):
 def home(current_user):
     return 'working'
 
-
-@app.route('/user', methods=['GET'])
+# for get all users,but only admin can
+@app.route('/users', methods=['GET'])
 @token_required
 def get_all_users(current_user):
     if not current_user['admin']:
-        return jsonify({'message': 'Cannot perform that function!'})
+        return jsonify({'message': 'User is not a admin'})
 
     output = []
 
@@ -71,16 +71,12 @@ def get_all_users(current_user):
                 'confirmseller': user['confirmseller']
             }
         )
-
     return jsonify({'users': output})
 
 
-@app.route('/user', methods=['POST'])
+# registration of new user
+@app.route('/registration', methods=['POST'])
 def create_user():
-    admin = True
-    if not admin:
-        return jsonify({'message': 'Cannot perform that function!'})
-
     data = request.get_json()
     hashed_password = generate_password_hash(data['password'], method='sha256')
 
@@ -98,14 +94,14 @@ def create_user():
         'seller': bool(data['seller']),
         'confirmseller': False
     })
-    return jsonify({'message': 'New user created!'})
+    return jsonify({'message': 'User is successfully registered'})
 
 
-@app.route('/book', methods=['GET'])
-# @token_required
-def get_all_books():
-    admin = True
-    if not admin:
+# for get all books, but only admin can
+@app.route('/books', methods=['POST'])
+@token_required
+def get_all_books(current_user):
+    if not current_user['admin']:
         return jsonify({'message': 'Cannot perform that function!'})
 
     output = []
@@ -114,26 +110,27 @@ def get_all_books():
         output.append(
             {
                 '_id': book['_id'],
+                'sellerName': book['sellerName'],
                 'bookName': book['bookName'],
                 'author': book['author'],
                 'pages': book['pages'],
                 'price': book['price'],
-                'seller': book['seller'],
                 'quantity': book['quantity'],
+                'seller_id': book['seller_id']
             }
         )
 
     return jsonify({'books': output})
 
 
+# for add a book, but only confirm seller can
 @app.route('/book', methods=['POST'])
-def create_book():
-    admin = True
-    if not admin:
-        return jsonify({'message': 'Cannot perform that function!'})
+@token_required
+def create_book(current_user):
+    if not current_user['confirmseller']:
+        return jsonify({'message': 'User is not a confirm seller'})
 
     data = request.get_json()
-    seller = 'jay bhakhar' #Todo: from token get userName
 
     books.insert_one({
         '_id': str(uuid.uuid4()),
@@ -142,9 +139,79 @@ def create_book():
         'pages': int(data['pages']),
         'price': int(data['price']),
         'quantity': int(data['quantity']),
-        'seller': seller
+        'sellerName': current_user['userName'],
+        'seller_id': current_user['_id']
     })
     return jsonify({'message': 'New book created!'})
+
+
+#for update a book
+@app.route('/book/<book_id>', methods=['PUT'])
+@token_required
+def update_book(current_user, book_id):
+    if not current_user['confirmseller']:
+        return jsonify({'message': 'User have not a rights to update a book'})
+
+    data = request.get_json()
+
+    books.find_one_and_update(
+        {
+            "_id": book_id  # user_id which admin one want to make seller
+        },
+        {
+            "$set":
+                {
+                    'bookName': str(data['bookName']),
+                    'author': str(data['author']),
+                    'pages': int(data['pages']),
+                    'price': int(data['price']),
+                    'quantity': int(data['quantity'])
+                }
+        }
+    )
+    return jsonify({'message': 'book updated!'})
+
+
+#request to become a seller, admin only
+@app.route('/admin/seller', methods=['GET'])
+@token_required
+def seller(curret_user):
+    if curret_user['admin']:
+        output = []
+        for user in users.find({'seller': True}):
+            output.append(
+                {
+                    '_id': user['_id'],
+                    'userName': user['userName'],
+                    'email': user['email'],
+                    'phoneNumber': user['phoneNumber'],
+                    'address': user['address'],
+                    'city': user['city'],
+                    'country': user['country'],
+                    'postindex': user['postindex']
+                }
+            )
+        return jsonify({'users': output})
+    return jsonify({'messange' : 'user not a admin'})
+
+
+# to confirm seller
+@app.route('/admin/<user_id>', methods=['PUT'])
+def confirmSeller(current_user, user_id):
+    if current_user['admin']:
+        users.find_one_and_update(
+            {
+                "_id": user_id['_id']  #user_id which admin one want to make seller
+            },
+            {
+                "$set":
+                    {
+                        "confirmseller": True
+                    }
+            }
+        )
+    else:
+        return jsonify({'messange' : 'user not a admin'})
 
 
 @app.route('/login', methods=['GET'])
@@ -157,7 +224,7 @@ def login():
         if True:
             token = jwt.encode(
                 {
-                'user_id': data['_id'],
+                '_id': data['_id'],
                 'admin': data['admin'],
                 'confirmseller': data['confirmseller'],
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
@@ -168,19 +235,12 @@ def login():
                 token,
                 app.config['SECRET_KEY'],
                 algorithms="HS256",
-                verify=False
+                options={"verify_signature": False}
             )
-            print("dic :- " + str(data))
-            current_user = users.find_one({'_id': data['user_id']})
-            def homea(current_user):
-                # if current_user['admin'] == False:
-                #     print('you are not admin')
-                if current_user['confirmseller']:
-                    print('you are seller')
-            homea(current_user)
+            print("dic :- " + str(data)) #for check token
+            current_user = users.find_one({'_id': data['_id']})
             return jsonify({'token': token})
     return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
-
 
 
 if __name__ == '__main__':

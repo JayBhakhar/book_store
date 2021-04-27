@@ -49,26 +49,37 @@ def home(current_user):
     return 'working'
 
 @app.route('/photo', methods = ['POST'])
-def photo():
+@token_required
+def photo(current_user):
     photo = request.files['photo']
-    filename = 'car.jpg' # photo.filename for use user's filename
-    mongo.save_file(filename, photo)
-    phototry.insert_one({'pictures_filename': filename})
+    mongo.save_file(photo.filename, photo)
+    phototry.insert_one(
+        {
+            '_id': str(uuid.uuid4()),
+            'book_id': current_user['_id'],
+            'seller_name': current_user['userName'],
+            'pictures_filename': photo.filename
+        }
+    )
     return 'working Done !'
 
 @app.route('/photo/<filename>', methods = ['GET'])
 def photoa(filename):
     return mongo.send_file(filename)
 
-@app.route('/cover_photo', methods = ['GET'])
+@app.route('/photo', methods = ['GET'])
 def pa():
     output = []
     for pic in phototry.find():
         output.append(
             {
-            'id': str(pic['_id'])
+            '_id': str(pic['_id']),
+            'book_id': pic['_id'],
+            'seller_name': pic['seller_name'],
+            'photo': pic['pictures_filename']
             }
         )
+        print(output)
         return jsonify({'cover_pic': output})
 
 

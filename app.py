@@ -1,17 +1,19 @@
 from flask import Flask, jsonify, request, make_response
-from flask_pymongo import MongoClient
+from flask_pymongo import MongoClient, PyMongo
 import jwt
 import datetime
 import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
-app = Flask(__name__)
-
 MongoURL = "mongodb+srv://JayBhakhar:jay456789@book-cluster.oec1c.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+app = Flask(__name__)
+app.config["MONGO_URI"] = MongoURL
+mongo = PyMongo(app)
 books = MongoClient(MongoURL).datadase.book
 users = MongoClient(MongoURL).datadase.user
 orders = MongoClient(MongoURL).datadase.order
+phototry = MongoClient(MongoURL).datadase.phototry
 app.config['SECRET_KEY'] = 'secret'
 
 
@@ -45,6 +47,18 @@ def token_required(f):
 @token_required
 def home(current_user):
     return 'working'
+
+@app.route('/photo', methods = ['POST'])
+def photo():
+    filename = 'car.jpg'
+    mongo.save_file(filename, request.files['filename'])
+    phototry.insert_one({'pictures_filename': filename})
+    return 'working Done !'
+
+@app.route('/photo/<filename>', methods = ['GET'])
+def photoa(filename):
+    return mongo.send_file(filename)
+
 
 # for get all users,but only admin can
 @app.route('/users', methods=['GET'])
@@ -128,29 +142,50 @@ def get_all_books(current_user):
 @app.route('/book', methods=['POST'])
 @token_required
 def create_book(current_user):
+    cover_filename = 'abc'
+    spine_filename = 'abc'
+    pictures_filename = 'abc'
+
     if not current_user['confirm_seller']:
         return jsonify({'message': 'User is not a confirm seller'})
-
     data = request.get_json()
 
     books.insert_one({
         '_id': str(uuid.uuid4()),
-        'seller_book_id': int(data['seller_book_id']),
         'book_name': str(data['bookName']),
-        'author': str(data['author']),
-        'pages': int(data['pages']),
+        'authors': str(data['authors']),
+        'illustrators': str(data['illustrators']),
+        'interpreters': str(data['interpreters']),
+        'publisher': str(data['publisher']),
+        'original_language': int(data['originalLanguage']),
+        'year': int(data['year']),
+        'ISBN': int(data['ISBN']),
+        'EAN': int(data['EAN']),
+        'ISSN': int(data['ISSN']),
+        'number_of_pages': int(data['numberOfPages']),
+        'height': int(data['height']),
+        'width': int(data['width']),
+        'length': int(data['length']),
+        'weight': int(data['weight']),
         'price': int(data['price']),
         'quantity': int(data['quantity']),
+        'seller_book_id': int(data['seller_book_id']),
+        'brief_annotation': str(data['briefAnnotation']),
+        'long_annotation': str(data['longAnnotation ']),
+        'cover_type': str(data['coverType']),
+        'cover': 'abc',
+        'spine': 'abc',
+        'pictures': 'abc',
         'seller_name': current_user['userName'],
-        'seller_id': current_user['_id']
+        'seller_id': current_user['_id'],
     })
     return jsonify({'message': 'New book created!'})
 
 
 #for update a book
-@app.route('/book/<book_id>', methods=['PUT'])
+@app.route('/book', methods=['PUT'])
 @token_required
-def update_book(current_user, book_id):
+def update_book(current_user):
     if not current_user['confirm_seller']:
         return jsonify({'message': 'User have not a rights to update a book'})
 
@@ -158,8 +193,8 @@ def update_book(current_user, book_id):
 
     books.find_one_and_update(
         {
-            "seller_book_id": book_id,
-            "seller_id": current_user['_id']# user_id which admin one want to make seller
+            "seller_book_id": data['book_id'],
+            "seller_id": current_user['_id']
         },
         {
             "$set":
@@ -272,6 +307,90 @@ def login():
                 algorithm="HS256")
             return jsonify({'token': token})
     return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
+
+
+# list of all orders, only admin
+@app.route('/orders', methods=['GET'])
+@token_required
+def all_order(current_user):
+    output = []
+    if current_user['admin']:
+        for order in orders.find():
+            output.append(
+                {
+                    '_id': order['_id'],
+                    'sellerID': order['sellerID'],
+                    'buyerID': order['buyerID'],
+                }
+            )
+    if current_user['confirm_seller']:
+        for order in orders.find(
+                {'sellerID': current_user['_id']}
+        ):
+            output.append(
+                {
+                    '_id': order['_id'],
+                    'buyerID': order['buyerID'],
+                    'seller_book_id': order['seller_book_id'],
+                    'sellerID': order['sellerID']
+                }
+            )
+    else:
+        for order in orders.find(
+                {'buyerID': current_user['_id']}
+        ):
+            output.append(
+                {
+                    '_id': order['_id'],
+                    'seller_book_id': order['seller_book_id'],
+                }
+            )
+    return jsonify({'orders': output})
+
+
+#add a order
+@app.route('/order', methods=['POST'])
+@token_required
+def create_order(current_user):
+
+    data = request.get_json()
+
+    orders.insert_one({
+        '_id': str(uuid.uuid4()),
+        'buyerID': current_user['_id'],
+        'sellerID': data['sellerID'],
+        'seller_book_id': data['seller_book_id'],
+        'quantity': data['quantity']
+    })
+    return jsonify({'message': 'New book created!'})
+
+
+#edit order
+@app.route('/editorder', methods=['PUT'])
+def edirOrder(current_user):
+    data = request.get_json()
+    orders.find_one_and_update(
+            {
+                "_id": data['_id']  #user_id which admin one want to make seller
+            },
+            {
+                "$set":
+                    {
+                        "quantity": data['quantity']
+                    }
+            }
+        )
+    return jsonify({'message' : 'order changed'})
+
+
+#delete order
+@app.route('/order', methods=['DELETE'])
+@token_required
+def delete_order(current_user):
+    orders.deleteOne({
+        'buyerID': current_user['_id'],
+    })
+    return jsonify({'message': 'order canceled'})
 
 
 if __name__ == '__main__':

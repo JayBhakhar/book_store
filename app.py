@@ -50,22 +50,47 @@ def home(current_user):
 
 @app.route('/photo', methods = ['POST'])
 @token_required
-def photo(current_user):
-    photo = request.files['photo']
-    mongo.save_file(photo.filename, photo)
+def save_photo(current_user):
+    data = request.get_json()
+
+    cover_photo = request.files['coverPhoto']
+    mongo.save_file(cover_photo.filename, cover_photo)
+
+    spine_photo = request.files['spinePhoto']
+    mongo.save_file(spine_photo.filename, spine_photo)
+
+    pictures_photo = request.files['picturesPhoto']
+    mongo.save_file(pictures_photo.filename, pictures_photo)
+
+    # photo = request.files['photo']
+    # mongo.save_file(photo.filename, photo)
+
     phototry.insert_one(
         {
             '_id': str(uuid.uuid4()),
-            'book_id': current_user['_id'],
+            'book_id': data['bookID'],
             'seller_name': current_user['userName'],
-            'pictures_filename': photo.filename
+            'cover_photo': cover_photo.filename,
+            'spine_photo': spine_photo.filename,
+            'pictures_photo': pictures_photo.filename
         }
     )
     return 'working Done !'
 
-@app.route('/photo/<filename>', methods = ['GET'])
-def photoa(filename):
-    return mongo.send_file(filename)
+@app.route('/photo', methods = ['GET'])
+def send_photo():
+    data = request.get_json()
+    for photo in phototry.find({'book_id': data['bookID']}):
+        cover_photo = photo['cover_photo']
+        # spine_photo = photo['spine_photo']
+        pictures_photo = photo['pictures_photo']
+        print(cover_photo)
+        print(pictures_photo)
+        # return mongo.send_file(cover_photo)
+        return mongo.send_file(pictures_photo)
+    # mongo.send_file(spine_photo)
+    # mongo.send_file(pictures_photo)
+    return jsonify({'message': 'Error to load picture'})
 
 @app.route('/photo', methods = ['GET'])
 def pa():
@@ -202,8 +227,8 @@ def create_book(current_user):
         'brief_annotation': str(data['briefAnnotation']),
         'long_annotation': str(data['longAnnotation ']),
         'cover_type': str(data['coverType']),
-        'cover': cover_photo.filename,
-        'spine': spine_photo.filename,
+        'cover_photo': cover_photo.filename,
+        'spine_photo': spine_photo.filename,
         'pictures': pictures_photo.filename,
         'seller_name': current_user['userName'],
         'seller_id': current_user['_id'],

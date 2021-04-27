@@ -46,12 +46,16 @@ def token_required(f):
 @app.route('/')
 @token_required
 def home(current_user):
+    print(current_user['admin'])
     return 'working'
 
 @app.route('/photo', methods = ['POST'])
 @token_required
 def save_photo(current_user):
     data = request.get_json()
+    # {
+    #     'bookID': idk from where thry will send because they dont have it)))
+    # }
 
     cover_photo = request.files['coverPhoto']
     mongo.save_file(cover_photo.filename, cover_photo)
@@ -80,6 +84,9 @@ def save_photo(current_user):
 @app.route('/photo', methods = ['GET'])
 def send_photo():
     data = request.get_json()
+    # {
+    #     'bookID': idk from where thry will send because they dont have it)))
+    # }
     for photo in phototry.find({'book_id': data['bookID']}):
         cover_photo = photo['cover_photo']
         # spine_photo = photo['spine_photo']
@@ -121,9 +128,9 @@ def get_all_users(current_user):
         output.append(
             {
                 '_id': user['_id'],
-                'userName': user['userName'],
+                'userName': user['user_name'],
                 'email': user['email'],
-                'phoneNumber': user['phoneNumber'],
+                'phoneNumber': user['phone_number'],
                 'address': user['address'],
                 'city': user['city'],
                 'country': user['country'],
@@ -141,13 +148,26 @@ def get_all_users(current_user):
 @app.route('/registration', methods=['POST'])
 def create_user():
     data = request.get_json()
+
+    # {
+    #     userName: 'jay',
+    #     email: 'jaybhakhar@gmail.com',
+    #     password: '123456'
+    #     phoneNumber: '+79961011395',
+    #     address: 'depovskaya, 27',
+    #     city: 123,
+    #     country: 123,
+    #     postindex: 685548,
+    #     seller: False
+    # }
+
     hashed_password = generate_password_hash(data['password'], method='sha256')
 
     users.insert_one({
         '_id': str(uuid.uuid4()),
-        'userName': str(data['userName']),
+        'user_name': str(data['userName']),
         'email': str(data['email']),
-        'phoneNumber': str(data['phoneNumber']),
+        'phone_number': str(data['phoneNumber']),
         'address': str(data['address']),
         'city': int(data['city']),
         'country': int(data['country']),
@@ -181,7 +201,7 @@ def get_all_books(current_user):
                 'quantity': book['quantity'],
                 'seller_id': book['seller_id']
             }
-        )
+        ) # need to change parameters
 
     return jsonify({'books': output})
 
@@ -195,14 +215,30 @@ def create_book(current_user):
 
     data = request.get_json()
 
-    cover_photo = request.files['coverPhoto']
-    mongo.save_file(cover_photo.filename, cover_photo)
-
-    spine_photo = request.files['spinePhoto']
-    mongo.save_file(spine_photo.filename, spine_photo)
-
-    pictures_photo = request.files['picturesPhoto']
-    mongo.save_file(pictures_photo.filename, pictures_photo)
+    # # example of data
+    # {
+    #     'bookName': 'The life of pi',
+    #     'authors': 'jay bhakhar',
+    #     'illustrators': 'person name',
+    #     'interpreters': 'person name',
+    #     'publisher': 'anton',
+    #     'originalLanguage': 'Russian',
+    #     'year': 1999,
+    #     'ISBN': 846454532,
+    #     'EAN': 12321231321,
+    #     'ISSN': 132123132,
+    #     'numberOfPages': 100,
+    #     'height': 23,
+    #     'width': 452,
+    #     'length': 54,
+    #     'weight': 75,
+    #     'price': 75,
+    #     'quantity': 48,
+    #     'sellerBookID': 1,
+    #     'briefAnnotation': '50-100 words',
+    #     'longAnnotation': '500-600 words',
+    #     'cover_type': 'Hard/Soft'
+    # }
 
     books.insert_one({
         '_id': str(uuid.uuid4()),
@@ -223,14 +259,11 @@ def create_book(current_user):
         'weight': int(data['weight']),
         'price': int(data['price']),
         'quantity': int(data['quantity']),
-        'seller_book_id': int(data['seller_book_id']),
+        'seller_book_id': int(data['sellerBookID']),
         'brief_annotation': str(data['briefAnnotation']),
-        'long_annotation': str(data['longAnnotation ']),
+        'long_annotation': str(data['longAnnotation']),
         'cover_type': str(data['coverType']),
-        'cover_photo': cover_photo.filename,
-        'spine_photo': spine_photo.filename,
-        'pictures': pictures_photo.filename,
-        'seller_name': current_user['userName'],
+        'seller_name': current_user['user_name'],
         'seller_id': current_user['_id'],
     })
     return jsonify({'message': 'New book created!'})
@@ -245,9 +278,13 @@ def update_book(current_user):
 
     data = request.get_json()
 
+    # {
+    #     sellerBookID: 123 #int
+    # }
+
     books.find_one_and_update(
         {
-            "seller_book_id": data['book_id'],
+            "seller_book_id": data['sellerBookID'],
             "seller_id": current_user['_id']
         },
         {
@@ -315,6 +352,12 @@ def new_sellers(curret_user):
 @app.route('/confirm_seller', methods=['PUT'])
 def confirmSeller(current_user):
     data = request.get_json()
+
+    # {
+    #     '_id': idk from where thry will send because they dont have it)))
+    #     'confirm':True #boolen
+    # }
+
     if current_user['admin']:
         if data['confirm']:
             users.find_one_and_update(
@@ -346,15 +389,18 @@ def confirmSeller(current_user):
 
 @app.route('/login', methods=['GET'])
 def login():
-    email = str(request.args['email'])
-    passwd = request.args['password']
-    for data in users.find({'email': email}):
-        if check_password_hash(data['password'], passwd):
+
+    data = request.get_json()
+    # {
+    #     'email': 'jaybhakhar@gmail.com'
+    #     'password': '123456'
+    # }
+
+    for data in users.find({'email': data['email']}):
+        if check_password_hash(data['password'], data['password']):
             token = jwt.encode(
                 {
                 '_id': data['_id'],
-                'admin': data['admin'],
-                'confirm_seller': data['confirm_seller'],
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
                 },
                 app.config['SECRET_KEY'],
@@ -409,11 +455,17 @@ def create_order(current_user):
 
     data = request.get_json()
 
+    # {
+    #     'sellerID': '1asd2465sada4455',
+    #     'sellerBookID': 42,
+    #     'quantity': 1
+    # }
+
     orders.insert_one({
         '_id': str(uuid.uuid4()),
-        'buyerID': current_user['_id'],
-        'sellerID': data['sellerID'],
-        'seller_book_id': data['seller_book_id'],
+        'buyer_id': current_user['_id'],
+        'seller_id': data['sellerID'],
+        'seller_book_id': data['sellerBookID'],
         'quantity': data['quantity']
     })
     return jsonify({'message': 'New book created!'})
@@ -423,9 +475,14 @@ def create_order(current_user):
 @app.route('/editorder', methods=['PUT'])
 def edirOrder(current_user):
     data = request.get_json()
+
+    # {
+    #     quantity:2
+    # }
+
     orders.find_one_and_update(
             {
-                "_id": data['_id']  #user_id which admin one want to make seller
+                "buyer_id": current_user['_id']  #user_id which admin one want to make seller
             },
             {
                 "$set":
@@ -442,7 +499,7 @@ def edirOrder(current_user):
 @token_required
 def delete_order(current_user):
     orders.deleteOne({
-        'buyerID': current_user['_id'],
+        'buyer_id': current_user['_id'],
     })
     return jsonify({'message': 'order canceled'})
 

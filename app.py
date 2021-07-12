@@ -49,12 +49,13 @@ def home(current_user):
     print(current_user['admin'])
     return 'working'
 
-@app.route('/photo', methods = ['POST'])
+
+@app.route('/photo', methods=['POST'])
 @token_required
 def save_photo(current_user):
     data = request.get_json()
     # {
-    #     'bookID': idk from where thry will send because they dont have it)))
+    #     'bookID': idk from where they will send because they don't have it)))
     # }
 
     cover_photo = request.files['coverPhoto']
@@ -81,7 +82,8 @@ def save_photo(current_user):
     )
     return 'working Done !'
 
-@app.route('/photo', methods = ['GET'])
+
+@app.route('/photo', methods=['GET'])
 def send_photo():
     data = request.get_json()
     # {
@@ -99,20 +101,47 @@ def send_photo():
     # mongo.send_file(pictures_photo)
     return jsonify({'message': 'Error to load picture'})
 
-@app.route('/photo', methods = ['GET'])
+
+@app.route('/photo', methods=['GET'])
 def pa():
     output = []
     for pic in phototry.find():
         output.append(
             {
-            '_id': str(pic['_id']),
-            'book_id': pic['_id'],
-            'seller_name': pic['seller_name'],
-            'photo': pic['pictures_filename']
+                '_id': str(pic['_id']),
+                'book_id': pic['_id'],
+                'seller_name': pic['seller_name'],
+                'photo': pic['pictures_filename']
             }
         )
         print(output)
         return jsonify({'cover_pic': output})
+
+
+# get user
+@app.route('/user', methods=['GET'])
+@token_required
+def get_user(current_user):
+    output = []
+
+    for user in users.find({'_id': current_user['_id']}):
+        output.append(
+            {
+                '_id': user['_id'],
+                'userName': user['user_name'],
+                'email': user['email'],
+                'phoneNumber': user['phone_number'],
+                'address': user['address'],
+                'city': user['city'],
+                'country': user['country'],
+                'password': user['password'],
+                'postindex': user['postindex'],
+                'admin': user['admin'],
+                'seller': user['seller'],
+                'confirmSeller': user['confirm_seller']
+            }  # left side print, right side database
+        )
+    return jsonify({'user': output})
 
 
 # for get all users,but only admin can
@@ -139,7 +168,7 @@ def get_all_users(current_user):
                 'admin': user['admin'],
                 'seller': user['seller'],
                 'confirm_seller': user['confirm_seller']
-            }
+            }  # left side print, right side database
         )
     return jsonify({'users': output})
 
@@ -149,17 +178,7 @@ def get_all_users(current_user):
 def create_user():
     data = request.get_json()
 
-    # {
-    #     userName: 'jay',
-    #     email: 'jaybhakhar@gmail.com',
-    #     password: '123456'
-    #     phoneNumber: '+79961011395',
-    #     address: 'depovskaya, 27',
-    #     city: 123,
-    #     country: 123,
-    #     postindex: 685548,
-    #     seller: False
-    # }
+    #
 
     hashed_password = generate_password_hash(data['password'], method='sha256')
 
@@ -180,30 +199,62 @@ def create_user():
     return jsonify({'message': 'User is successfully registered'})
 
 
-# for get all books, but only admin can
-@app.route('/admin/books', methods=['GET'])
+# for get all books
+@app.route('/books', methods=['GET'])
 @token_required
 def get_all_books(current_user):
-    if not current_user['admin']:
-        return jsonify({'message': 'Cannot perform that function!'})
-
     output = []
-
     for book in books.find():
         output.append(
             {
                 '_id': book['_id'],
-                'sellerName': book['sellerName'],
-                'bookName': book['bookName'],
-                'author': book['author'],
-                'pages': book['pages'],
+                'bookName': book['book_name'],
+                'authors': book['authors'],
+                'price': book['price'],
+            }
+        )
+    return jsonify({'books': output})
+
+
+# for book
+@app.route('/get_book', methods=['POST'])
+@token_required
+def get_book(current_user):
+    data = request.get_json()
+    # {
+    #  book_id: '3bbfa2dc-5121-4d87-841e-77624b0338a8'
+    # }
+    output = []
+    for book in books.find({'_id': data['book_id']}):
+        output.append(
+            {
+                '_id': book['_id'],
+                'sellerId': book['seller_id'],
+                'bookName': book['book_name'],
+                'authors': book['authors'],
+                'illustrators': book['illustrators'],
+                'interpreters': book['interpreters'],
+                'publisher': book['publisher'],
+                'originalLanguage': book['original_language'],
+                'year': book['year'],
+                'ISBN': book['ISBN'],
+                'EAN': book['EAN'],
+                'ISSN': book['ISSN'],
+                'numberOfPages': book['number_of_pages'],
+                'height': book['height'],
+                'width': book['width'],
+                'length': book['length'],
+                'weight': book['weight'],
                 'price': book['price'],
                 'quantity': book['quantity'],
-                'seller_id': book['seller_id']
+                'sellerBookId': book['seller_book_id'],
+                'briefAnnotation': book['brief_annotation'],
+                'longAnnotation': book['long_annotation'],
+                'coverType': book['cover_type'],
+                'sellerName': book['seller_name'],
             }
-        ) # need to change parameters
-
-    return jsonify({'books': output})
+        )
+    return jsonify({'book': output})
 
 
 # for add a book, but only confirm seller can
@@ -237,7 +288,7 @@ def create_book(current_user):
     #     'sellerBookID': 1,
     #     'briefAnnotation': '50-100 words',
     #     'longAnnotation': '500-600 words',
-    #     'cover_type': 'Hard/Soft'
+    #     'coverType': 'Hard/Soft'
     # }
 
     books.insert_one({
@@ -247,7 +298,7 @@ def create_book(current_user):
         'illustrators': str(data['illustrators']),
         'interpreters': str(data['interpreters']),
         'publisher': str(data['publisher']),
-        'original_language': int(data['originalLanguage']),
+        'original_language': str(data['originalLanguage']),
         'year': int(data['year']),
         'ISBN': int(data['ISBN']),
         'EAN': int(data['EAN']),
@@ -266,10 +317,10 @@ def create_book(current_user):
         'seller_name': current_user['user_name'],
         'seller_id': current_user['_id'],
     })
-    return jsonify({'message': 'New book created!'})
+    return jsonify({'message': 'New book Added!'})
 
 
-#for update a book
+# for update a book
 @app.route('/book', methods=['PUT'])
 @token_required
 def update_book(current_user):
@@ -301,8 +352,8 @@ def update_book(current_user):
     return jsonify({'message': 'book updated!'})
 
 
-#seller list, admin only
-@app.route('/admin/sellers', methods=['GET'])
+# confirm sellers list, admin only
+@app.route('/confirm_sellers', methods=['GET'])
 @token_required
 def seller(curret_user):
     if curret_user['admin']:
@@ -311,21 +362,45 @@ def seller(curret_user):
             output.append(
                 {
                     '_id': user['_id'],
-                    'userName': user['userName'],
+                    'userName': user['user_name'],
                     'email': user['email'],
-                    'phoneNumber': user['phoneNumber'],
+                    'phoneNumber': user['phone_number'],
                     'address': user['address'],
                     'city': user['city'],
                     'country': user['country'],
                     'postindex': user['postindex']
                 }
             )
-        return jsonify({'users': output})
-    return jsonify({'message' : 'user not a admin'})
+        return jsonify({'sellers': output})
+    return jsonify({'message': 'user not a admin'})
+
+
+# to remove confirm seller and seller request
+@app.route('/confirm_seller', methods=['DELETE'])
+@token_required
+def confirmSeller(current_user):
+    data = request.get_json()
+    # {
+    #     '_id': 'user_id'
+    # }
+    if current_user['admin']:
+        users.find_one_and_update(
+            {
+                "_id": data['_id']  # user_id which admin one want to make seller
+            },
+            {
+                "$set":
+                    {
+                        "confirm_seller": False,
+                        "seller": False
+                    }
+            }
+        )
+    return jsonify({'message': 'removed successfully'})
 
 
 # just recently ask to seller
-@app.route('/admin/newSellers', methods=['GET'])
+@app.route('/newSellers', methods=['GET'])
 @token_required
 def new_sellers(curret_user):
     if curret_user['admin']:
@@ -334,74 +409,56 @@ def new_sellers(curret_user):
             output.append(
                 {
                     '_id': user['_id'],
-                    'userName': user['userName'],
+                    'userName': user['user_name'],
                     'email': user['email'],
-                    'phoneNumber': user['phoneNumber'],
+                    'phoneNumber': user['phone_number'],
                     'address': user['address'],
                     'city': user['city'],
                     'country': user['country'],
                     'postindex': user['postindex']
                 }
             )
-        return jsonify({'users': output})
-    return jsonify({'message' : 'user not a admin'})
+        return jsonify({'newSellers': output})
+    return jsonify({'message': 'user not a admin'})
 
 
-# to confirm seller
-# in data should have two parameter id and confirm(bool)
-@app.route('/confirm_seller', methods=['PUT'])
-def confirmSeller(current_user):
+# add to confirm selller
+@app.route('/newSellers', methods=['PUT'])
+@token_required
+def make_confirm_seller(curret_user):
+
     data = request.get_json()
 
     # {
-    #     '_id': idk from where thry will send because they dont have it)))
-    #     'confirm':True #boolen
+    #     '_id' : 'user_id'
     # }
 
-    if current_user['admin']:
-        if data['confirm']:
-            users.find_one_and_update(
-                {
-                    "_id": data['_id']  #user_id which admin one want to make seller
-                },
-                {
-                    "$set":
-                        {
-                            "confirm_seller": True
-                        }
-                }
-            )
-        else:
-            users.find_one_and_update(
-                {
-                    "_id": data['_id']  # user_id which admin one want to make seller
-                },
-                {
-                    "$set":
-                        {
-                            "seller": False
-                        }
-                }
-            )
-    else:
-        return jsonify({'message' : 'user is not a admin'})
+    if curret_user['admin']:
+        users.find_one_and_update({
+                "_id": data['_id']  # user_id which admin one want to make seller
+            },
+            {
+                "$set":
+                    {
+                        "confirm_seller": True,
+                    }
+            })
+    return jsonify({'message': 'added to confirm seller'})
 
 
-@app.route('/login', methods=['GET'])
+@app.route('/login', methods=['POST'])
 def login():
-
-    data = request.get_json()
+    user = request.get_json()
     # {
-    #     'email': 'jaybhakhar@gmail.com'
-    #     'password': '123456'
+    #     "email": "jaybhakhar@gmail.com",
+    #     "password": "123456"
     # }
-
-    for data in users.find({'email': data['email']}):
-        if check_password_hash(data['password'], data['password']):
+    for data in users.find({'email': user['email']}):
+        if check_password_hash(data['password'], user['password']):
             token = jwt.encode(
                 {
-                '_id': data['_id'],
-                'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
+                    '_id': data['_id'],
+                    # 'exp': datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
                 },
                 app.config['SECRET_KEY'],
                 algorithm="HS256")
@@ -448,17 +505,16 @@ def all_order(current_user):
     return jsonify({'orders': output})
 
 
-#add a order
+# add a order
 @app.route('/order', methods=['POST'])
 @token_required
 def create_order(current_user):
-
     data = request.get_json()
 
     # {
+    #     'bookID': '1asd246sadsa5sada4455',
     #     'sellerID': '1asd2465sada4455',
     #     'sellerBookID': 42,
-    #     'quantity': 1
     # }
 
     orders.insert_one({
@@ -466,12 +522,11 @@ def create_order(current_user):
         'buyer_id': current_user['_id'],
         'seller_id': data['sellerID'],
         'seller_book_id': data['sellerBookID'],
-        'quantity': data['quantity']
     })
-    return jsonify({'message': 'New book created!'})
+    return jsonify({'message': 'order taken'})
 
 
-#edit order
+# edit order
 @app.route('/editorder', methods=['PUT'])
 def edirOrder(current_user):
     data = request.get_json()
@@ -481,20 +536,20 @@ def edirOrder(current_user):
     # }
 
     orders.find_one_and_update(
-            {
-                "buyer_id": current_user['_id']  #user_id which admin one want to make seller
-            },
-            {
-                "$set":
-                    {
-                        "quantity": data['quantity']
-                    }
-            }
-        )
-    return jsonify({'message' : 'order changed'})
+        {
+            "buyer_id": current_user['_id']  # user_id which admin one want to make seller
+        },
+        {
+            "$set":
+                {
+                    "quantity": data['quantity']
+                }
+        }
+    )
+    return jsonify({'message': 'order changed'})
 
 
-#delete order
+# delete order
 @app.route('/order', methods=['DELETE'])
 @token_required
 def delete_order(current_user):
@@ -505,4 +560,4 @@ def delete_order(current_user):
 
 
 if __name__ == '__main__':
-    app.run(debug=1)
+    app.run(host='192.168.0.112', debug=1)

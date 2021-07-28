@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request, make_response
 from flask_pymongo import MongoClient, PyMongo
 import jwt
 import uuid
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from functools import wraps
 import csv
 
@@ -419,18 +419,19 @@ def confirmSeller(current_user):
     #     '_id': 'user_id'
     # }
     if current_user['admin']:
-        users.find_one_and_update(
-            {
-                "_id": data['_id']  # user_id which admin one want to make seller
-            },
-            {
-                "$set":
-                    {
-                        "confirm_seller": False,
-                        "seller": False
-                    }
-            }
-        )
+        # users.find_one_and_update(
+        #     {
+        #         "_id": data['_id']  # user_id which admin one want to make seller
+        #     },
+        #     {
+        #         "$set":
+        #             {
+        #                 "confirm_seller": False,
+        #                 "seller": False
+        #             }
+        #     }
+        # )
+        return "trye"
     return jsonify({'message': 'removed successfully'})
 
 
@@ -500,7 +501,6 @@ def login():
     return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login required!"'})
 
 
-
 # get user
 @app.route('/cart', methods=['GET'])
 @token_required
@@ -519,7 +519,6 @@ def get_cart(current_user):
 @app.route('/cart', methods=['POST'])
 @token_required
 def add_item_to_cart(current_user):
-
     data = request.get_json()
     # TODO : user_id and seller_id must be different if not it mean seller buy is own book
 
@@ -539,6 +538,16 @@ def add_item_to_cart(current_user):
     })
     return jsonify({'message': 'New Item Added!'})
 
+
+@app.route('/cart', methods=['DELETE'])
+@token_required
+def remove_item_from_cart(current_user):
+    data = request.get_json()
+    # {
+    #     '_id': 'item_id'
+    # }
+    _cart.delete_one({"_id": data['_id']})
+    return jsonify({'message': 'removed successfully'})
 
 
 # list of all orders, only admin
@@ -599,6 +608,7 @@ def create_order(current_user):
         'seller_book_id': data['sellerBookID'],
     })
     return jsonify({'message': 'order taken'})
+
 
 # registration of new user
 @app.route('/registration', methods=['POST'])
@@ -687,3 +697,4 @@ def csva():
 
 if __name__ == '__main__':
     app.run(host='192.168.0.112', debug=1)
+    # app.run(debug=1)

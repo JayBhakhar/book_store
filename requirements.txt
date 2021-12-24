@@ -9,6 +9,7 @@ ecdsa==0.17.0
 fastapi==0.68.1
 Flask==2.0.1
 Flask-PyMongo==2.3.0
+gunicorn==20.1.0
 h11==0.12.0
 itsdangerous==2.0.1
 Jinja2==3.0.1

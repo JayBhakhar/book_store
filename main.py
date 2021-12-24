@@ -17,6 +17,11 @@ userCollection = MongoClient(MongoURL).datadase.user
 auth_handler = AuthHandler()
 
 
+@app.get('/')
+def home():
+    return '<h1> welcome to backend </h1>'
+
+
 @app.get('/supplier')
 def get_suppliers():
     output = []
@@ -45,6 +50,7 @@ def login(_user: Login):
 def get_user(_token_id=Depends(auth_handler.auth_wrapper)):
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     # pwd_context.hash(password) // save hashed password
+    print(current_user)
     return JSONResponse({'User': current_user})
 
 
@@ -127,5 +133,5 @@ def get_books():
 
 
 if __name__ == "__main__":
-    # uvicorn.run(app, host='10.194.80.232', port=5000)
-    uvicorn.run(app, port=5000)
+    uvicorn.run(app, host='192.168.0.121', port=5000)
+    # uvicorn.run(app, port=5000)

@@ -13,6 +13,7 @@ MongoURL = "mongodb+srv://JayBhakhar:jay456789@book-cluster.oec1c.mongodb.net/my
 bookCollection = MongoClient(MongoURL).datadase.book
 supplierCollection = MongoClient(MongoURL).datadase.supplier
 userCollection = MongoClient(MongoURL).datadase.user
+deliveryWaysCollection = MongoClient(MongoURL).datadase.deliveryWays
 
 auth_handler = AuthHandler()
 
@@ -50,8 +51,7 @@ def login(_user: Login):
 def get_user(_token_id=Depends(auth_handler.auth_wrapper)):
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     # pwd_context.hash(password) // save hashed password
-    print(current_user)
-    return JSONResponse({'User': current_user})
+    return JSONResponse({'User': [current_user]})
 
 
 @app.post('/registration')
@@ -91,12 +91,22 @@ def update_user(_user: UpdateUser, _token_id: auth_handler.auth_wrapper = Depend
                     'address': _user.address,
                     'phone_number': _user.phone_number,
                 }})
-    message = "Saved"
+    message = "Your profile details has saved"
+    return JSONResponse({'message': message})
+
+
+@app.delete('/registration')
+def delete_user(_token_id: auth_handler.auth_wrapper = Depends()):
+    current_user = userCollection.find_one({'_id': _token_id['_id']})
+    userCollection.delete_one({
+        "_id": current_user['_id'],
+    })
+    message = "Deleted"
     return JSONResponse({'message': message})
 
 
 @app.put('/change_password')
-def update_user(_passwords: Passwords, _token_id: auth_handler.auth_wrapper = Depends()):
+def update_user_password(_passwords: Passwords, _token_id: auth_handler.auth_wrapper = Depends()):
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     hashed_password = auth_handler.get_password_hash(_passwords.new_password)
     if auth_handler.verify_password(_passwords.current_password, current_user['password']):
@@ -132,6 +142,15 @@ def get_books():
     return JSONResponse({'Books': output})
 
 
+@app.get('/test2')
+def delivery_ways():
+    lst = []
+    for i in deliveryWaysCollection.find({"Субъекты и населенные пункты": {"$regex": "Брянск"}}):
+        # lst.append(i['Тарифная зона'])
+        print(i)
+    print(lst)
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host='192.168.0.121', port=5000)
+    uvicorn.run(app, host='10.194.80.78', port=5000)
     # uvicorn.run(app, port=5000)

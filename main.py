@@ -5,12 +5,12 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from flask_pymongo import MongoClient
 from auth import AuthHandler
-from base_models import Login, Registration, UpdateUser, Passwords
+from base_models import Login, Registration, UpdateUser, Passwords, BookId
 from passlib.context import CryptContext
 
 app = FastAPI()
 MongoURL = "mongodb+srv://JayBhakhar:jay456789@book-cluster.oec1c.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
-bookCollection = MongoClient(MongoURL).datadase.book
+bookCollection = MongoClient(MongoURL).datadase.bookMaster
 supplierCollection = MongoClient(MongoURL).datadase.supplier
 userCollection = MongoClient(MongoURL).datadase.user
 deliveryWaysCollection = MongoClient(MongoURL).datadase.deliveryWays
@@ -71,6 +71,8 @@ def create_user(_user: Registration):
         'email': _user.email,
         'password': hashed_password,
         'address': _user.password,
+        #zip-code
+        #city
         'phone_number': _user.phone_number
     }
     )
@@ -142,6 +144,12 @@ def get_books():
     return JSONResponse({'Books': output})
 
 
+@app.post('/book')
+def get_book(book_id: BookId):
+    book = bookCollection.find_one({'_id': book_id.book_id})
+    return JSONResponse({'Book': [book]})
+
+
 @app.get('/test2')
 def delivery_ways():
     lst = []
@@ -149,8 +157,11 @@ def delivery_ways():
         # lst.append(i['Тарифная зона'])
         print(i)
     print(lst)
+    if not lst:
+        return "default price"
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host='10.194.80.78', port=5000)
-    # uvicorn.run(app, port=5000)
+    # uvicorn.run(app, host='10.194.80.78', port=5000)
+    uvicorn.run(app, port=5000)
+

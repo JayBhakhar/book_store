@@ -27,6 +27,8 @@ class Passwords(BaseModel):
     new_password: str
 
 
+class BookId(BaseModel):
+    book_id: str
 
 
 

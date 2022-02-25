@@ -1,7 +1,8 @@
 import uvicorn
 import random
 import uuid
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
+from typing import Optional
 from fastapi.responses import JSONResponse
 from flask_pymongo import MongoClient
 from auth import AuthHandler
@@ -144,9 +145,10 @@ def get_books():
     return JSONResponse({'Books': output})
 
 
-@app.post('/book')
-def get_book(book_id: BookId):
-    book = bookCollection.find_one({'_id': book_id.book_id})
+@app.get('/book')
+async def get_book(request: Request):
+    book_id = request.headers.get('book_id')
+    book = bookCollection.find_one({'_id': book_id})
     return JSONResponse({'Book': [book]})
 
 
@@ -162,6 +164,6 @@ def delivery_ways():
 
 
 if __name__ == "__main__":
-    # uvicorn.run(app, host='10.194.80.78', port=5000)
-    uvicorn.run(app, port=5000)
+    uvicorn.run(app, host='10.194.80.78', port=5000)
+    # uvicorn.run(app, port=5000)
 

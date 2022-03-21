@@ -47,7 +47,7 @@ def login(_user: Login):
     return JSONResponse({"message": "Could not find User"}, 401)
 
 
-# eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJfaWQiOiI4NjYyYzdmMy04NzhkLTQxYmQtYWQ4Zi1iZDUwZTk4MDFiY2UifQ.FDXBsAIG2KD10Bt4YPFGVMlAq6OptsrH6UYKmoR_LaU
+# eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJfaWQiOiI1NDlmZWM0Ny1iODFjLTQ0YzMtYTc1YS1jNDNjOTc5NDEzYWIifQ.-j8aYvv5u0TAzDfSBKXd1UYtZIp4DmHVc1KEieHwUKU
 @app.get('/registration')
 def get_user(_token_id=Depends(auth_handler.auth_wrapper)):
     current_user = userCollection.find_one({'_id': _token_id['_id']})
@@ -55,7 +55,6 @@ def get_user(_token_id=Depends(auth_handler.auth_wrapper)):
     return JSONResponse({'User': [current_user]})
 
 
-@app.post('/registration')
 # {
 # _id: str
 # email: str
@@ -63,7 +62,12 @@ def get_user(_token_id=Depends(auth_handler.auth_wrapper)):
 # password: str
 # address: str
 # phone_number: str
+# zip_code: str
+# city: str
 # }
+
+
+@app.post('/registration')
 def create_user(_user: Registration):
     hashed_password = auth_handler.get_password_hash(_user.password)
     userCollection.insert_one({
@@ -71,12 +75,11 @@ def create_user(_user: Registration):
         'user_name': _user.user_name,
         'email': _user.email,
         'password': hashed_password,
-        'address': _user.password,
-        #zip-code
-        #city
+        'address': _user.address,
+        'zip_code': _user.zip_code,
+        'city': _user.city,
         'phone_number': _user.phone_number
-    }
-    )
+    })
     message = 'User is successfully registered'
     return JSONResponse({'message': message})
 
@@ -93,6 +96,8 @@ def update_user(_user: UpdateUser, _token_id: auth_handler.auth_wrapper = Depend
                     'user_name': _user.user_name,
                     'address': _user.address,
                     'phone_number': _user.phone_number,
+                    'zip_code': _user.zip_code,
+                    'city': _user.city,
                 }})
     message = "Your profile details has saved"
     return JSONResponse({'message': message})
@@ -152,18 +157,23 @@ async def get_book(request: Request):
     return JSONResponse({'Book': [book]})
 
 
-@app.get('/test2')
-def delivery_ways():
+# eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJfaWQiOiI1NDlmZWM0Ny1iODFjLTQ0YzMtYTc1YS1jNDNjOTc5NDEzYWIifQ.-j8aYvv5u0TAzDfSBKXd1UYtZIp4DmHVc1KEieHwUKU
+@app.get('/delivery_charges')
+def delivery_charges_counter(request: Request, _token_id: auth_handler.auth_wrapper = Depends()):
+    # todo: need to change
     lst = []
-    for i in deliveryWaysCollection.find({"Субъекты и населенные пункты": {"$regex": "Брянск"}}):
-        # lst.append(i['Тарифная зона'])
-        print(i)
-    print(lst)
-    if not lst:
-        return "default price"
+    weight = float(request.headers.get('weight'))
+    current_user = userCollection.find_one({'_id': _token_id['_id']})
+    for i in deliveryWaysCollection.find({"location": {"$regex": current_user['city'].capitalize()}}):
+        lst.append(i)
+    delivery_charge = lst[0]['price']
+    if weight > 3.0:
+        n = weight // 3
+        delivery_charge += (n * lst[0]['additional_charge'])
+    return JSONResponse({'delivery_charge': delivery_charge, 'delivery_time': lst[0]['delivery_time']})
+    # return JSONResponse({'Delivery_Charges': [{'delivery_charge': delivery_charge, 'delivery_time': lst[0]['delivery_time']}]})
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host='10.194.80.78', port=5000)
+    uvicorn.run(app, host='10.194.80.135', port=5000)
     # uvicorn.run(app, port=5000)
-

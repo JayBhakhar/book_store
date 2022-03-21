@@ -13,6 +13,8 @@ class Registration(BaseModel):
     password: str
     address: Optional[str] = None
     phone_number: Optional[str] = None
+    zip_code: Optional[str] = None
+    city: Optional[str]
 #     Todo: to check parameters, data come as "" not null
 
 
@@ -20,6 +22,8 @@ class UpdateUser(BaseModel):
     user_name: str
     address: Optional[str]
     phone_number: Optional[str]
+    zip_code: Optional[str]
+    city: Optional[str]
 
 
 class Passwords(BaseModel):
@@ -29,7 +33,6 @@ class Passwords(BaseModel):
 
 class BookId(BaseModel):
     book_id: str
-
 
 
 

@@ -13,6 +13,7 @@ app = FastAPI()
 MongoURL = "mongodb+srv://JayBhakhar:jay456789@book-cluster.oec1c.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
 bookCollection = MongoClient(MongoURL).datadase.bookMaster
 supplierCollection = MongoClient(MongoURL).datadase.supplier
+supplierBooksCollection = MongoClient(MongoURL).datadase.supplierBook
 userCollection = MongoClient(MongoURL).datadase.user
 deliveryWaysCollection = MongoClient(MongoURL).datadase.deliveryWays
 
@@ -171,9 +172,39 @@ def delivery_charges_counter(request: Request, _token_id: auth_handler.auth_wrap
         n = weight // 3
         delivery_charge += (n * lst[0]['additional_charge'])
     return JSONResponse({'delivery_charge': delivery_charge, 'delivery_time': lst[0]['delivery_time']})
-    # return JSONResponse({'Delivery_Charges': [{'delivery_charge': delivery_charge, 'delivery_time': lst[0]['delivery_time']}]})
+
+
+@app.get('/supplier_options')
+def supplier_options(request: Request, _token_id: auth_handler.auth_wrapper = Depends()):
+    current_user = userCollection.find_one({'_id': _token_id['_id']})
+    book_weight = float(request.headers.get('book_weight'))
+    our_book_id = int(request.headers.get('our_book_id'))
+    delivery_ways = []
+    supplier_books = []
+    for delivery_way in deliveryWaysCollection.find({"location": {"$regex": current_user['city'].capitalize()}}):
+        delivery_ways.append(delivery_way)
+    for supplier_book in supplierBooksCollection.find({"id_книги_наш": our_book_id}):
+        i = 0
+        delivery_charge = delivery_ways[i]['price']
+        if book_weight > 3.0:
+            n = book_weight // 3
+            delivery_charge += (n * delivery_ways[i]['additional_charge'])
+        supplier_book['delivery_charge'] = delivery_charge
+        supplier_book['срок_отправки_поставщика'] += delivery_ways[i]['delivery_time']
+        supplier_book['delivery_name'] = delivery_ways[i]['name']
+        supplier_books.append(supplier_book)
+        # Todo: FOR NOW ITS RETURN ONLY ONE QUERY BECAUSE suppliers HAVE ONLY ONE 'deliveryWay'.
+        # for supplier in supplierCollection.find({'поставщик': supplier_book['поставщик']}):
+        #     print(supplier['поставщик'])
+        #     suppliers.append(supplier)
+        # for deliveryWay in deliveryWaysCollection.find(
+        #         {"location": {"$regex": current_user['city'].capitalize()}, 'name': supplier['deliveryWay']}):
+        #     delivery_ways.append(deliveryWay)
+        # delivery_ways = [i for n, i in enumerate(delivery_ways) if
+        #                      i not in delivery_ways[n + 1:]]  # Remove duplicate dict in list
+    return JSONResponse({'ChooseSupplier': supplier_books})
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host='10.194.80.135', port=5000)
-    # uvicorn.run(app, port=5000)
+    # uvicorn.run(app, host='10.194.80.135', port=5000)
+    uvicorn.run(app, port=5000)

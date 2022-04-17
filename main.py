@@ -181,7 +181,7 @@ def supplier_options(request: Request, _token_id: auth_handler.auth_wrapper = De
     our_book_id = int(request.headers.get('our_book_id'))
     delivery_ways = []
     supplier_books = []
-    for delivery_way in deliveryWaysCollection.find({"location": {"$regex": current_user['city'].capitalize()}}):
+    for delivery_way in deliveryWaysCollection.find({"location": {"$regex": current_user['city']}}):
         delivery_ways.append(delivery_way)
     for supplier_book in supplierBooksCollection.find({"id_книги_наш": our_book_id}):
         i = 0
@@ -206,5 +206,5 @@ def supplier_options(request: Request, _token_id: auth_handler.auth_wrapper = De
 
 
 if __name__ == "__main__":
-    # uvicorn.run(app, host='10.194.80.135', port=5000)
-    uvicorn.run(app, port=5000)
+    uvicorn.run(app, host='192.168.50.95', port=5000)
+    # uvicorn.run(app, port=5000)

@@ -56,6 +56,10 @@ def get_user(_token_id=Depends(auth_handler.auth_wrapper)):
     return JSONResponse({'User': [current_user]})
 
 
+@app.post('/test')
+def test():
+    return "Test route"
+
 # {
 # _id: str
 # email: str
@@ -66,23 +70,25 @@ def get_user(_token_id=Depends(auth_handler.auth_wrapper)):
 # zip_code: str
 # city: str
 # }
-
-
 @app.post('/registration')
 def create_user(_user: Registration):
-    hashed_password = auth_handler.get_password_hash(_user.password)
-    userCollection.insert_one({
-        '_id': str(uuid.uuid4()),
-        'user_name': _user.user_name,
-        'email': _user.email,
-        'password': hashed_password,
-        'address': _user.address,
-        'zip_code': _user.zip_code,
-        'city': _user.city,
-        'phone_number': _user.phone_number
-    })
-    message = 'User is successfully registered'
-    return JSONResponse({'message': message})
+    if userCollection.find_one({'email': _user.email}) is not None:
+        message = 'Email already registered'
+        return JSONResponse({'message': message})
+    else:
+        hashed_password = auth_handler.get_password_hash(_user.password)
+        userCollection.insert_one({
+            '_id': str(uuid.uuid4()),
+            'user_name': _user.user_name,
+            'email': _user.email,
+            'password': hashed_password,
+            'address': _user.address,
+            'zip_code': _user.zip_code,
+            'city': _user.city,
+            'phone_number': _user.phone_number
+        })
+        message = 'User is successfully registered'
+        return JSONResponse({'message': message})
 
 
 @app.put('/registration')
@@ -132,14 +138,6 @@ def update_user_password(_passwords: Passwords, _token_id: auth_handler.auth_wra
         return JSONResponse({"message": "Password Changed"})
     else:
         return JSONResponse({"message": "Password does not match"}, 401)
-
-
-@app.post('/test')
-def create_user(_token_id=Depends(auth_handler.auth_wrapper)):
-    current_user = userCollection.find_one({'_id': _token_id['_id']})
-    print(current_user)
-    # pwd_context.hash(password) // save hashed password
-    return "nothing"
 
 
 @app.get('/books')

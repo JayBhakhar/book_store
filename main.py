@@ -60,6 +60,7 @@ def get_user(_token_id=Depends(auth_handler.auth_wrapper)):
 def test():
     return "Test route"
 
+
 # {
 # _id: str
 # email: str
@@ -70,11 +71,13 @@ def test():
 # zip_code: str
 # city: str
 # }
+
+
 @app.post('/registration')
 def create_user(_user: Registration):
     if userCollection.find_one({'email': _user.email}) is not None:
         message = 'Email already registered'
-        return JSONResponse({'message': message})
+        return JSONResponse({'message': message}, 409)
     else:
         hashed_password = auth_handler.get_password_hash(_user.password)
         userCollection.insert_one({

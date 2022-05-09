@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi.responses import JSONResponse
 from flask_pymongo import MongoClient
 from auth import AuthHandler
-from base_models import Login, Registration, UpdateUser, Passwords, BookId
+from base_models import Login, Registration, UpdateUser, Passwords, BookId, Order
 from passlib.context import CryptContext
 
 app = FastAPI()
@@ -16,6 +16,7 @@ supplierCollection = MongoClient(MongoURL).datadase.supplier
 supplierBooksCollection = MongoClient(MongoURL).datadase.supplierBook
 userCollection = MongoClient(MongoURL).datadase.user
 deliveryWaysCollection = MongoClient(MongoURL).datadase.deliveryWays
+orderCollection = MongoClient(MongoURL).datadase.order
 
 auth_handler = AuthHandler()
 
@@ -159,6 +160,35 @@ async def get_book(request: Request):
     return JSONResponse({'Book': [book]})
 
 
+@app.get('/order')
+def get_order():
+    orders_list = []
+    for order in orderCollection.find():
+        orders_list.append(order)
+    return JSONResponse({'Order': orders_list})
+
+
+@app.post('/order')
+def create_order(order: Order, _token_id: auth_handler.auth_wrapper = Depends()):
+    current_user = userCollection.find_one({'_id': _token_id['_id']})
+    order_list = []
+    for i in order.order:
+        order_list.append(i.dict())
+    orderCollection.insert_one({
+        '_id': str(uuid.uuid4()),
+        'order': order_list,
+        'client_id': current_user['_id'],
+        'client_name': current_user['user_name'],
+        'client_email': current_user['email'],
+        'client_address': current_user['address'],
+        'client_zip_code': current_user['zip_code'],
+        'client_city': current_user['city'],
+        'client_phone_number': current_user['phone_number']
+    })
+    message = 'Order Confirmed'
+    return JSONResponse({'message': message})
+
+
 # eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJfaWQiOiI1NDlmZWM0Ny1iODFjLTQ0YzMtYTc1YS1jNDNjOTc5NDEzYWIifQ.-j8aYvv5u0TAzDfSBKXd1UYtZIp4DmHVc1KEieHwUKU
 @app.get('/delivery_charges')
 def delivery_charges_counter(request: Request, _token_id: auth_handler.auth_wrapper = Depends()):
@@ -207,5 +237,5 @@ def supplier_options(request: Request, _token_id: auth_handler.auth_wrapper = De
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host='192.168.50.95', port=5000)
+    uvicorn.run("main:app", host='192.168.50.95', port=5000, reload=True)
     # uvicorn.run(app, port=5000)

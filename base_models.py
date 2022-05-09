@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict
 
 
 class Login(BaseModel):
@@ -35,4 +35,13 @@ class BookId(BaseModel):
     book_id: str
 
 
+class OrderList(BaseModel):
+    book_id: str
+    supplier_name: str
+    supplier_book_id: int
+    total: str
+    post: str
 
+
+class Order(BaseModel):
+    order: List[OrderList]

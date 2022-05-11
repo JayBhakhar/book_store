@@ -34,6 +34,14 @@ def get_suppliers():
     return JSONResponse({'suppliers': output})
 
 
+@app.get('/users')
+def get_users():
+    output = []
+    for user in userCollection.find():
+        output.append(user)
+    return JSONResponse({'user': output})
+
+
 @app.post('/login')
 # {
 #   "login": "string",
@@ -55,23 +63,6 @@ def get_user(_token_id=Depends(auth_handler.auth_wrapper)):
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     # pwd_context.hash(password) // save hashed password
     return JSONResponse({'User': [current_user]})
-
-
-@app.post('/test')
-def test():
-    return "Test route"
-
-
-# {
-# _id: str
-# email: str
-# name: str
-# password: str
-# address: str
-# phone_number: str
-# zip_code: str
-# city: str
-# }
 
 
 @app.post('/registration')
@@ -166,10 +157,10 @@ def get_order(_token_id: auth_handler.auth_wrapper = Depends()):
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     orders_list = []
     if current_user['is_seller']:
-        for order in orderCollection.find({'client_id': _token_id['supplier_name']}):
+        for order in orderCollection.find({'user_name': current_user['user_name']}):
             orders_list.append(order)
     else:
-        for order in orderCollection.find({'supplier_name': _token_id['_id']}):
+        for order in orderCollection.find({'client_id': _token_id['_id']}):
             orders_list.append(order)
     return JSONResponse({'Order': orders_list})
 

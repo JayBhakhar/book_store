@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_pymongo import MongoClient, PyMongo
 import json
-import pandas as pd
+# import pandas as pd
 import uuid
 
 MongoURL = "mongodb+srv://JayBhakhar:jay456789@book-cluster.oec1c.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
@@ -43,7 +43,15 @@ app.config['SECRET_KEY'] = 'secret'
 # supplierCollection.insert_many(results)
 # print('finish')
 
-
+# user
+# userCollection = MongoClient(MongoURL).datadase.user
+# userCollection.update_many(
+#     {},
+#     {
+#         "$set": {"is_seller": False}
+#     },
+#     upsert=True,
+# )
 
 # deliveryWays
 # deliveryWaysCollection = MongoClient(MongoURL).datadase.deliveryWays

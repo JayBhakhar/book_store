@@ -89,7 +89,8 @@ def create_user(_user: Registration):
             'address': _user.address,
             'zip_code': _user.zip_code,
             'city': _user.city,
-            'phone_number': _user.phone_number
+            'phone_number': _user.phone_number,
+            'is_seller': False
         })
         message = 'User is successfully registered'
         return JSONResponse({'message': message})
@@ -161,30 +162,39 @@ async def get_book(request: Request):
 
 
 @app.get('/order')
-def get_order():
+def get_order(_token_id: auth_handler.auth_wrapper = Depends()):
+    current_user = userCollection.find_one({'_id': _token_id['_id']})
     orders_list = []
-    for order in orderCollection.find():
-        orders_list.append(order)
+    if current_user['is_seller']:
+        for order in orderCollection.find({'client_id': _token_id['supplier_name']}):
+            orders_list.append(order)
+    else:
+        for order in orderCollection.find({'supplier_name': _token_id['_id']}):
+            orders_list.append(order)
     return JSONResponse({'Order': orders_list})
 
 
 @app.post('/order')
 def create_order(order: Order, _token_id: auth_handler.auth_wrapper = Depends()):
     current_user = userCollection.find_one({'_id': _token_id['_id']})
-    order_list = []
     for i in order.order:
-        order_list.append(i.dict())
-    orderCollection.insert_one({
-        '_id': str(uuid.uuid4()),
-        'order': order_list,
-        'client_id': current_user['_id'],
-        'client_name': current_user['user_name'],
-        'client_email': current_user['email'],
-        'client_address': current_user['address'],
-        'client_zip_code': current_user['zip_code'],
-        'client_city': current_user['city'],
-        'client_phone_number': current_user['phone_number']
-    })
+        i = i.dict()
+        orderCollection.insert_one({
+            '_id': str(uuid.uuid4()),
+            'status': 'not sent yet',
+            'book_id': i['book_id'],
+            'supplier_name': i['supplier_name'],
+            'supplier_book_id': i['supplier_book_id'],
+            'total': i['total'],
+            'post': i['post'],
+            'client_id': current_user['_id'],
+            'client_name': current_user['user_name'],
+            'client_email': current_user['email'],
+            'client_address': current_user['address'],
+            'client_zip_code': current_user['zip_code'],
+            'client_city': current_user['city'],
+            'client_phone_number': current_user['phone_number']
+        })
     message = 'Order Confirmed'
     return JSONResponse({'message': message})
 

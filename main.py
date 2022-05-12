@@ -157,8 +157,8 @@ async def get_order(request: Request, _token_id: auth_handler.auth_wrapper = Dep
     is_clients_order = request.headers.get('is_clients_order')
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     orders_list = []
-    if current_user['is_seller'] & is_clients_order:
-        for order in orderCollection.find({'user_name': current_user['user_name']}):
+    if current_user['is_seller'] and is_clients_order == 'true':
+        for order in orderCollection.find({'supplier_name': current_user['user_name']}):
             orders_list.append(order)
     else:
         for order in orderCollection.find({'client_id': _token_id['_id']}):
@@ -240,4 +240,4 @@ def supplier_options(request: Request, _token_id: auth_handler.auth_wrapper = De
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host='192.168.50.95', port=5000, reload=True)
-    # uvicorn.run(app, port=5000)
+    # uvicorn.run(app, host='192.168.50.95', port=5000)

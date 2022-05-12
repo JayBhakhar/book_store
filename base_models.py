@@ -15,7 +15,6 @@ class Registration(BaseModel):
     phone_number: Optional[str] = None
     zip_code: Optional[str] = None
     city: str
-    is_seller: bool
 
 
 #     Todo: to check parameters, data come as "" not null

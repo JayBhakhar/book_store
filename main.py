@@ -153,10 +153,11 @@ async def get_book(request: Request):
 
 
 @app.get('/order')
-def get_order(_token_id: auth_handler.auth_wrapper = Depends()):
+async def get_order(request: Request, _token_id: auth_handler.auth_wrapper = Depends()):
+    is_clients_order = request.headers.get('is_clients_order')
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     orders_list = []
-    if current_user['is_seller']:
+    if current_user['is_seller'] & is_clients_order:
         for order in orderCollection.find({'user_name': current_user['user_name']}):
             orders_list.append(order)
     else:

@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi.responses import JSONResponse
 from flask_pymongo import MongoClient
 from auth import AuthHandler
-from base_models import Login, Registration, UpdateUser, Passwords, BookId, Order
+from base_models import Login, Registration, UpdateUser, Passwords, BookId, Order,UpdateOrder
 from passlib.context import CryptContext
 
 app = FastAPI()
@@ -171,10 +171,14 @@ def create_order(order: Order, _token_id: auth_handler.auth_wrapper = Depends())
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     for i in order.order:
         i = i.dict()
+        print(i)
         orderCollection.insert_one({
             '_id': str(uuid.uuid4()),
             'status': 'not sent yet',
             'book_id': i['book_id'],
+            'book_image': i['book_image'],
+            'book_name': i['book_name'],
+            'book_author': i['book_author'],
             'supplier_name': i['supplier_name'],
             'supplier_book_id': i['supplier_book_id'],
             'total': i['total'],
@@ -188,6 +192,22 @@ def create_order(order: Order, _token_id: auth_handler.auth_wrapper = Depends())
             'client_phone_number': current_user['phone_number']
         })
     message = 'Order Confirmed'
+    return JSONResponse({'message': message})
+
+
+@app.put('/order')
+def update_order(_order: UpdateOrder):
+    orderCollection.find_one_and_update({
+        "_id": _order.id,
+    },
+        {
+            "$set":
+                {
+                    'status': _order.status
+                }
+        }
+    )
+    message = "order status changed"
     return JSONResponse({'message': message})
 
 

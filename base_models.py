@@ -17,7 +17,7 @@ class Registration(BaseModel):
     city: str
 
 
-#     Todo: to check parameters, data come as "" not null
+# Todo: to check parameters, data come as "" not null
 
 
 class UpdateUser(BaseModel):
@@ -39,6 +39,9 @@ class BookId(BaseModel):
 
 class OrderList(BaseModel):
     book_id: str
+    book_image: str
+    book_name: str
+    book_author: str
     supplier_name: str
     supplier_book_id: int
     total: str
@@ -47,3 +50,8 @@ class OrderList(BaseModel):
 
 class Order(BaseModel):
     order: List[OrderList]
+
+
+class UpdateOrder(BaseModel):
+    id: str
+    status: str

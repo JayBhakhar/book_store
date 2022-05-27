@@ -58,14 +58,14 @@ def login(_user: Login):
 
 
 # eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJfaWQiOiI1NDlmZWM0Ny1iODFjLTQ0YzMtYTc1YS1jNDNjOTc5NDEzYWIifQ.-j8aYvv5u0TAzDfSBKXd1UYtZIp4DmHVc1KEieHwUKU
-@app.get('/registration')
+@app.get('/user')
 def get_user(_token_id=Depends(auth_handler.auth_wrapper)):
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     # pwd_context.hash(password) // save hashed password
     return JSONResponse({'User': [current_user]})
 
 
-@app.post('/registration')
+@app.post('/user')
 def create_user(_user: Registration):
     if userCollection.find_one({'email': _user.email}) is not None:
         message = 'Email already registered'
@@ -87,7 +87,7 @@ def create_user(_user: Registration):
         return JSONResponse({'message': message})
 
 
-@app.put('/registration')
+@app.put('/user')
 def update_user(_user: UpdateUser, _token_id: auth_handler.auth_wrapper = Depends()):
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     userCollection.find_one_and_update({
@@ -106,7 +106,7 @@ def update_user(_user: UpdateUser, _token_id: auth_handler.auth_wrapper = Depend
     return JSONResponse({'message': message})
 
 
-@app.delete('/registration')
+@app.delete('/user')
 def delete_user(_token_id: auth_handler.auth_wrapper = Depends()):
     current_user = userCollection.find_one({'_id': _token_id['_id']})
     userCollection.delete_one({

@@ -8,6 +8,7 @@ from flask_pymongo import MongoClient
 from auth import AuthHandler
 from base_models import Login, Registration, UpdateUser, Passwords, BookId, Order, UpdateOrder
 from passlib.context import CryptContext
+from urllib.parse import unquote
 
 app = FastAPI()
 MongoURL = "mongodb+srv://JayBhakhar:jay456789@book-cluster.oec1c.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
@@ -148,6 +149,7 @@ def get_books():
 @app.get('/search_books')
 async def get_search_books(request: Request):
     query = request.headers.get('query')
+    query = unquote(query)
     book_list = []
     for book in bookCollection.find({'Название': {"$regex": query}}):
         book_list.append(book)

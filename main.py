@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi.responses import JSONResponse
 from flask_pymongo import MongoClient
 from auth import AuthHandler
-from base_models import Login, Registration, UpdateUser, Passwords, BookId, Order,UpdateOrder
+from base_models import Login, Registration, UpdateUser, Passwords, BookId, Order, UpdateOrder
 from passlib.context import CryptContext
 
 app = FastAPI()
@@ -143,6 +143,15 @@ def get_books():
         book_list.append(book)
     output = random.sample(book_list, 10)
     return JSONResponse({'Books': output})
+
+
+@app.get('/search_books')
+async def get_search_books(request: Request):
+    query = request.headers.get('query')
+    book_list = []
+    for book in bookCollection.find({'Название': {"$regex": query}}):
+        book_list.append(book)
+    return JSONResponse({'Books': book_list})
 
 
 @app.get('/book')

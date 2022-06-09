@@ -9,6 +9,7 @@ from auth import AuthHandler
 from base_models import Login, Registration, UpdateUser, Passwords, BookId, Order, UpdateOrder
 from passlib.context import CryptContext
 from urllib.parse import unquote
+from starlette.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 MongoURL = "mongodb+srv://JayBhakhar:jay456789@book-cluster.oec1c.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
@@ -20,6 +21,16 @@ deliveryWaysCollection = MongoClient(MongoURL).datadase.deliveryWays
 orderCollection = MongoClient(MongoURL).datadase.order
 
 auth_handler = AuthHandler()
+
+
+app = FastAPI()
+app.add_middleware(
+CORSMiddleware,
+allow_origins=["*"],
+allow_credentials=True,
+allow_methods=["*"],
+allow_headers=["*"],
+)
 
 
 @app.get('/')
